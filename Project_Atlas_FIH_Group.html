@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Atlas — Confidential</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+--void:#06080c;--ink:#0a0d14;--deep:#0e1219;--panel:#121720;--panel2:#171d28;--panel3:#1c2332;
+--rule:#252d40;--rule2:#303a52;--bone:#e6e0d2;--cream:#f2ece0;--parch:#c8c0ae;--fog:#949aae;
+--slate:#6e7690;--dim:#4c5468;--muted:#3a4258;
+--gold:#c9a24a;--gold2:#ddb856;--gold3:#a07e30;--goldg:rgba(201,162,74,.1);
+--em:#3cc06a;--emd:rgba(60,192,106,.1);--sc:#df4545;--scd:rgba(223,69,69,.08);
+--az:#4a8cd8;--azd:rgba(74,140,216,.08);--vi:#8a6cc8;--vid:rgba(138,108,200,.08);
+--am:#d0a030;--amd:rgba(208,160,48,.08);
+}
+body{font-family:'Outfit',sans-serif;background:var(--void);color:var(--bone);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+
+/* ============================================================
+   L O C K   S C R E E N
+   ============================================================ */
+#LS{position:fixed;inset:0;z-index:9999;background:var(--void);display:flex;align-items:center;justify-content:center;transition:opacity 1s cubic-bezier(.4,0,.2,1),transform 1s cubic-bezier(.4,0,.2,1);}
+#LS.bye{opacity:0;transform:scale(1.08);pointer-events:none;}
+
+/* Canvas background */
+#bgCanvas{position:absolute;inset:0;z-index:0;}
+
+/* Particles */
+.particle{position:absolute;width:2px;height:2px;background:var(--gold);border-radius:50%;opacity:0;animation:drift 12s linear infinite;}
+@keyframes drift{0%{opacity:0;transform:translateY(0) scale(1);}10%{opacity:.4;}50%{opacity:.2;transform:translateY(-200px) scale(.5);}100%{opacity:0;transform:translateY(-400px) scale(0);}}
+
+/* The lock content */
+.ls-wrap{position:relative;z-index:2;text-align:center;max-width:640px;padding:0 32px;}
+
+/* Animated atlas globe */
+.globe-wrap{width:140px;height:140px;margin:0 auto 40px;position:relative;}
+.globe-ring{position:absolute;inset:0;border:1px solid rgba(201,162,74,.15);border-radius:50%;animation:globeSpin 20s linear infinite;}
+.globe-ring:nth-child(2){inset:8px;border-color:rgba(201,162,74,.1);animation-duration:30s;animation-direction:reverse;}
+.globe-ring:nth-child(3){inset:16px;border-color:rgba(201,162,74,.08);animation-duration:40s;}
+.globe-core{position:absolute;inset:24px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(201,162,74,.12),transparent 70%);display:flex;align-items:center;justify-content:center;}
+.globe-core svg{width:48px;height:48px;opacity:.7;}
+/* Meridian lines */
+.merid{position:absolute;inset:24px;border-radius:50%;border:1px solid rgba(201,162,74,.06);transform:rotateY(60deg);animation:meridSpin 15s linear infinite;}
+.merid:nth-child(5){transform:rotateY(120deg);animation-delay:-5s;}
+.merid:nth-child(6){transform:rotateX(60deg);animation-delay:-10s;}
+@keyframes globeSpin{to{transform:rotate(360deg);}}
+@keyframes meridSpin{to{transform:rotateY(420deg);}}
+
+/* Pulsing glow under globe */
+.globe-glow{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);width:120px;height:40px;background:radial-gradient(ellipse,rgba(201,162,74,.15),transparent 70%);animation:glowPulse 3s ease-in-out infinite;}
+@keyframes glowPulse{0%,100%{opacity:.5;transform:translateX(-50%) scaleX(1);}50%{opacity:1;transform:translateX(-50%) scaleX(1.2);}}
+
+.ls-class{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--sc);margin-bottom:20px;animation:blink 2.5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+.ls-title{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:300;letter-spacing:3px;background:linear-gradient(135deg,var(--gold2),var(--gold),var(--gold3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1;margin-bottom:6px;}
+.ls-sub{font-size:12px;letter-spacing:6px;text-transform:uppercase;color:var(--slate);margin-bottom:48px;font-weight:300;}
+
+/* The riddle area */
+.riddle-box{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:36px 32px 28px;margin-bottom:24px;position:relative;overflow:hidden;}
+.riddle-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold3),transparent);}
+
+.riddle-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);margin-bottom:16px;}
+.riddle-text{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;font-style:italic;color:var(--parch);line-height:1.6;margin-bottom:20px;}
+.riddle-text em{color:var(--gold);font-style:italic;}
+
+/* Clue cards */
+.clue-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;}
+.clue{background:var(--deep);border:1px solid var(--rule);border-radius:6px;padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fog);display:flex;align-items:center;gap:6px;transition:all .3s;}
+.clue:hover{border-color:var(--gold3);color:var(--gold);}
+.clue .dot{width:6px;height:6px;border-radius:50%;}
+.clue .dot.g{background:var(--em);}
+.clue .dot.r{background:var(--sc);}
+.clue .dot.b{background:var(--az);}
+
+.ls-input-row{display:flex;gap:10px;justify-content:center;margin-top:24px;}
+#passIn{background:var(--deep);border:1px solid var(--rule);padding:14px 22px;border-radius:8px;color:var(--cream);font-family:'JetBrains Mono',monospace;font-size:15px;width:220px;text-align:center;letter-spacing:3px;outline:none;transition:all .3s;}
+#passIn:focus{border-color:var(--gold);box-shadow:0 0 20px rgba(201,162,74,.1);}
+#passIn::placeholder{color:var(--muted);letter-spacing:1px;font-size:12px;}
+
+#goBtn{background:linear-gradient(135deg,var(--gold),var(--gold3));border:none;padding:14px 32px;border-radius:8px;color:var(--void);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;}
+#goBtn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(201,162,74,.25);}
+#goBtn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-100%);transition:transform .5s;}
+#goBtn:hover::after{transform:translateX(100%);}
+
+.ls-err{font-family:'JetBrains Mono',monospace;font-size:11px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--sc);transition:all .3s;}
+.ls-hint-btn{font-size:11px;color:var(--dim);cursor:pointer;transition:color .3s;margin-top:4px;text-decoration:underline;text-underline-offset:3px;}
+.ls-hint-btn:hover{color:var(--fog);}
+
+.ls-foot{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;white-space:nowrap;}
+
+/* Hint modal */
+#hintModal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(6,8,12,.85);align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+#hintModal.show{display:flex;}
+.hint-card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:36px;max-width:480px;text-align:center;position:relative;}
+.hint-card h3{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;color:var(--gold);margin-bottom:16px;}
+.hint-card p{font-size:13px;color:var(--fog);line-height:1.8;margin-bottom:12px;}
+.hint-card code{background:var(--deep);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:12px;}
+.hint-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--slate);font-size:18px;cursor:pointer;}
+
+/* ============================================================
+   M A I N   A P P
+   ============================================================ */
+#APP{display:none;min-height:100vh;}
+#APP.on{display:block;animation:appIn 1.2s ease .3s both;}
+@keyframes appIn{from{opacity:0;}to{opacity:1;}}
+
+/* Watermark */
+.wm{position:fixed;bottom:-30px;right:-30px;z-index:1;font-family:'Cormorant Garamond',serif;font-size:200px;font-weight:700;color:rgba(201,162,74,.012);pointer-events:none;user-select:none;line-height:1;}
+
+/* Navbar */
+.nb{position:sticky;top:0;z-index:100;background:rgba(6,8,12,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--rule);}
+.nb-in{max-width:1480px;margin:0 auto;padding:0 52px;}
+.nb-top{display:flex;justify-content:space-between;align-items:center;padding:22px 0 14px;}
+.nb-brand{display:flex;align-items:center;gap:16px;}
+.nb-logo{width:40px;height:40px;border:1.5px solid var(--gold3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold);}
+.nb-ttl{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--cream);letter-spacing:.5px;}
+.nb-sub{font-size:10px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-top:1px;font-weight:300;}
+.nb-kpis{display:flex;gap:40px;}
+.kp{text-align:right;}
+.kp-l{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);}
+.kp-v{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:600;color:var(--gold);}
+.kp-v.g{color:var(--em);}
+
+/* Tabs */
+.tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;padding-bottom:0;}
+.tabs::-webkit-scrollbar{display:none;}
+.tb{padding:11px 24px;font-size:10.5px;font-weight:600;color:var(--slate);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .25s;letter-spacing:1px;text-transform:uppercase;user-select:none;}
+.tb:hover{color:var(--bone);}
+.tb.on{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* Main */
+.mn{max-width:1480px;margin:0 auto;padding:52px 52px 120px;}
+.pn{display:none;animation:pnIn .45s ease;}
+.pn.on{display:block;}
+@keyframes pnIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* Hero */
+.hq{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;font-style:italic;color:var(--cream);line-height:1.45;max-width:820px;margin-bottom:10px;opacity:0;animation:su .7s ease .1s forwards;}
+.hq em{color:var(--gold);font-style:italic;}
+.ha{font-size:11px;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:52px;font-weight:300;opacity:0;animation:su .7s ease .25s forwards;}
+@keyframes su{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+/* Narrative */
+.nr{font-family:'Cormorant Garamond',serif;font-size:18px;line-height:1.85;color:var(--fog);max-width:800px;margin-bottom:28px;}
+.nr strong{color:var(--cream);font-weight:500;}
+.nr em{color:var(--gold);font-style:italic;}
+
+/* Section */
+.sc{margin-bottom:60px;}
+.sh{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
+.sn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--gold3);background:var(--goldg);padding:4px 10px;border-radius:3px;letter-spacing:1px;}
+.st2{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;color:var(--cream);}
+.sd{font-size:13.5px;color:var(--fog);max-width:740px;line-height:1.7;margin-bottom:22px;}
+
+/* Card */
+.cd{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden;transition:border-color .3s;}
+.cd:hover{border-color:var(--rule2);}
+.ch{padding:14px 22px;border-bottom:1px solid var(--rule);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--slate);background:var(--panel2);}
+
+/* Tables */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:10px 18px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--rule);background:var(--panel2);white-space:nowrap;}
+td{padding:11px 18px;border-bottom:1px solid rgba(37,45,64,.5);color:var(--bone);white-space:nowrap;}
+tr:hover td{background:rgba(201,162,74,.015);}
+.n{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.b{font-weight:700;}.ac{color:var(--gold);font-weight:600;}.gr{color:var(--em);}.rd{color:var(--sc);}.mu{color:var(--fog);}.dm{color:var(--dim);}.in{padding-left:36px;}
+.tot td{border-top:2px solid var(--rule2);font-weight:700;background:var(--goldg);}
+.sub td{font-weight:600;}
+.sp td{padding:4px;border:none;}
+.slbl td{font-weight:700;color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding-top:18px;}
+.hl td{background:var(--goldg);}
+
+/* Grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+
+/* Stat */
+.sb{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:24px;position:relative;overflow:hidden;}
+.sb::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.sb.gd::before{background:linear-gradient(90deg,var(--gold),var(--gold3));}
+.sb.gn::before{background:var(--em);}
+.sb.bl::before{background:var(--az);}
+.sb.vl::before{background:var(--vi);}
+.sb .sl{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin-bottom:6px;}
+.sb .sv{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:600;}
+.sb .sv.gd{color:var(--gold);}.sb .sv.gn{color:var(--em);}.sb .sv.bl{color:var(--az);}
+.sb .ss{font-size:12px;color:var(--fog);margin-top:5px;}
+
+/* Callout */
+.co{border-left:3px solid var(--gold);padding:18px 24px;background:var(--goldg);border-radius:0 10px 10px 0;margin:24px 0;font-size:14px;color:var(--fog);line-height:1.7;}
+.co strong{color:var(--gold2);}
+.co.red{border-left-color:var(--sc);background:var(--scd);}.co.red strong{color:var(--sc);}
+.co.green{border-left-color:var(--em);background:var(--emd);}.co.green strong{color:var(--em);}
+
+/* Tags */
+.tg{display:inline-block;padding:3px 10px;border-radius:4px;font-size:9.5px;font-weight:700;letter-spacing:.5px;}
+.tg.core{background:var(--emd);color:var(--em);}.tg.strip{background:var(--scd);color:var(--sc);}
+.tg.infra{background:var(--azd);color:var(--az);}.tg.sold{background:var(--vid);color:var(--vi);}
+.tg.warn{background:var(--amd);color:var(--am);}
+
+/* Risk */
+.rb{display:inline-flex;padding:3px 10px;border-radius:4px;font-size:9.5px;font-weight:700;}
+.rb.hi{background:var(--scd);color:var(--sc);}.rb.me{background:var(--amd);color:var(--am);}
+.rb.lo{background:var(--azd);color:var(--az);}.rb.fl{background:var(--vid);color:var(--vi);}
+
+/* Sensitivity */
+.slo{background:rgba(223,69,69,.05);}.smi{background:rgba(201,162,74,.05);}
+.shi{background:rgba(60,192,106,.05);}.shl{background:rgba(201,162,74,.16)!important;color:var(--gold)!important;font-weight:700!important;}
+
+/* Franchise cards */
+.fc{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden;transition:transform .3s,box-shadow .3s;}
+.fc:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.35);}
+.fc-top{padding:24px 26px;border-bottom:1px solid var(--rule);}
+.fc-body{padding:22px 26px;}
+.fc-tag{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.fc-ebitda{font-family:'JetBrains Mono',monospace;font-size:14px;}
+.fc-rev{font-size:12px;color:var(--fog);margin-bottom:10px;}
+.fc-desc{font-size:12.5px;color:var(--fog);line-height:1.65;}
+
+/* Pillar cards */
+.pl{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:28px;position:relative;overflow:hidden;}
+.pl::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),transparent);}
+.pl .plx{font-family:'Cormorant Garamond',serif;font-size:40px;color:var(--gold);margin-bottom:6px;font-weight:600;}
+.pl h4{font-size:15px;font-weight:700;margin-bottom:6px;color:var(--cream);}
+.pl .pi{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--em);}
+.pl .pt{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin:4px 0 12px;}
+.pl p{font-size:12.5px;color:var(--fog);line-height:1.7;}
+
+/* Timeline */
+.tl{position:relative;padding-left:34px;}
+.tl::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:1px;background:var(--rule);}
+.tli{position:relative;margin-bottom:30px;}
+.tli::before{content:'';position:absolute;left:-27px;top:7px;width:11px;height:11px;border-radius:50%;background:var(--gold);border:2px solid var(--void);}
+.tli.done::before{background:var(--em);}
+.tli .tll{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);}
+.tli .tlt{font-weight:700;font-size:15px;margin:3px 0;color:var(--cream);}
+.tli .tld{font-size:12.5px;color:var(--fog);line-height:1.6;}
+
+/* Big number */
+.bn-row{display:flex;gap:36px;margin:36px 0 44px;flex-wrap:wrap;align-items:center;}
+.bn{text-align:center;}
+.bn .bv{font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:700;}
+.bn .bv.gd{color:var(--gold);}.bn .bv.gn{color:var(--em);}
+.bn .bl2{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin-top:4px;}
+.bn .bs{font-size:11.5px;color:var(--fog);margin-top:2px;}
+.bn-arrow{font-size:28px;color:var(--rule2);font-weight:300;}
+
+/* Tree */
+.tree{padding:28px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2.2;}
+
+.note{font-size:11px;color:var(--dim);margin-top:12px;font-style:italic;}
+.ft{font-size:9px;color:var(--dim);text-align:center;padding:52px 0;border-top:1px solid var(--rule);margin-top:52px;letter-spacing:1.5px;}
+
+@media(max-width:900px){
+.nb-in,.mn{padding-left:20px;padding-right:20px;}
+.nb-top{flex-direction:column;gap:16px;align-items:flex-start;}
+.g2,.g3,.g4{grid-template-columns:1fr;}
+.hq{font-size:26px;}.ls-title{font-size:36px;}
+.bn .bv{font-size:36px;}.bn-row{gap:20px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     L O C K   S C R E E N
+     ============================================================ -->
+<div id="LS">
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- Particles -->
+  <div id="particles"></div>
+
+  <div class="ls-wrap">
+    <!-- Animated globe -->
+    <div class="globe-wrap">
+      <div class="globe-ring"></div>
+      <div class="globe-ring"></div>
+      <div class="globe-ring"></div>
+      <div class="merid"></div>
+      <div class="merid"></div>
+      <div class="merid"></div>
+      <div class="globe-core">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.2">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <div class="globe-glow"></div>
+    </div>
+
+    <div class="ls-class">◈ Strictly Confidential ◈</div>
+    <div class="ls-title">Project Atlas</div>
+    <div class="ls-sub">Aurelius Group · March 2026</div>
+
+    <div class="riddle-box">
+      <div class="riddle-label">◆ Access Protocol ◆</div>
+      <div class="riddle-text">
+        A buyer paid <em>12.6×</em> for the ferry.<br>
+        The rump waits at <em>4.7×</em>.<br>
+        What lies between them?
+      </div>
+      <div class="clue-row">
+        <div class="clue"><span class="dot g"></span>PHFC: 12.6×</div>
+        <div class="clue"><span class="dot r"></span>Gap: ???</div>
+        <div class="clue"><span class="dot b"></span>Rump: 4.7×</div>
+      </div>
+      <div class="riddle-label" style="margin-bottom:8px;font-size:8px;color:var(--muted);">Enter the number that defines the entire thesis</div>
+      <div class="ls-input-row">
+        <input type="text" id="passIn" placeholder="_ . _" autocomplete="off" autofocus>
+        <button id="goBtn" onclick="tryUnlock()">Unlock</button>
+      </div>
+    </div>
+
+    <div class="ls-err" id="lsErr">&nbsp;</div>
+    <div class="ls-hint-btn" onclick="showHint()">Stuck? Get a clue.</div>
+  </div>
+
+  <div class="ls-foot">Joe Barry · All figures pre-IFRS 16 · Sources: FIH RNS filings & Company accounts</div>
+</div>
+
+<!-- Hint modal -->
+<div id="hintModal">
+  <div class="hint-card">
+    <button class="hint-close" onclick="hideHint()">✕</button>
+    <h3>A Gentleman's Clue</h3>
+    <p>The answer is not a multiple. It's not a price.<br>It's the <em>distance</em> between them.</p>
+    <p>A buyer validated the ferry at one number.<br>The rump sits at another.<br>The <strong>gap</strong> between those two multiples — expressed as a number — is your key.</p>
+    <p>Think: <code>12.6 − 4.7 = ?</code></p>
+    <p style="font-size:11px;color:var(--dim);margin-top:16px;">Still stuck? The penguins say it's <code>7.9</code></p>
+  </div>
+</div>
+
+<!-- ============================================================
+     M A I N   A P P  (same structure as before, all data intact)
+     ============================================================ -->
+<div id="APP">
+<div class="wm">ATLAS</div>
+<nav class="nb"><div class="nb-in">
+  <div class="nb-top">
+    <div class="nb-brand"><div class="nb-logo">A</div><div><div class="nb-ttl">Project Atlas</div><div class="nb-sub">FIH Group PLC · AIM: FIH · Control Acquisition</div></div></div>
+    <div class="nb-kpis">
+      <div class="kp"><div class="kp-l">Mkt Cap</div><div class="kp-v">£33.5m</div></div>
+      <div class="kp"><div class="kp-l">PHFC Sale</div><div class="kp-v g">12.6×</div></div>
+      <div class="kp"><div class="kp-l">Rump Entry</div><div class="kp-v">4.7×</div></div>
+      <div class="kp"><div class="kp-l">Base IRR</div><div class="kp-v g">27.6%</div></div>
+    </div>
+  </div>
+  <div class="tabs" id="navTabs">
+    <div class="tb on" data-p="thesis">The Thesis</div>
+    <div class="tb" data-p="franchises">Franchises</div>
+    <div class="tb" data-p="numbers">Segmental</div>
+    <div class="tb" data-p="valuation">Valuation</div>
+    <div class="tb" data-p="restructuring">Restructuring</div>
+    <div class="tb" data-p="entities">Subsidiaries</div>
+    <div class="tb" data-p="recon">Reconciliation</div>
+    <div class="tb" data-p="risks">Risks</div>
+    <div class="tb" data-p="action">IC Action</div>
+  </div>
+</div></nav>
+
+<div class="mn">
+
+<!-- ═══════ THE THESIS ═══════ -->
+<div class="pn on" id="thesis">
+  <div class="hq">"A strategic buyer paid <em>12.6×</em> for the ferry.<br>The rest of the empire is yours at <em>4.7×</em>."</div>
+  <div class="ha">The 7.9-turn gap is the entire investment thesis</div>
+
+  <div class="nr"><strong>FIH Group is a forgotten conglomerate</strong> — listed on AIM, trading at 268p, capitalised at £33.5m. It owns three things: a 175-year-old monopoly on the Falkland Islands, an institutional art logistics business that stores works for the Tate and the Royal Collection, and a passenger ferry that just got sold at a premium multiple to a strategic buyer.</div>
+  <div class="nr">The problem? Two loss-making divisions — <em>FBS Construction</em> and <em>Momart Exhibitions</em> — poison the optic. They drag the blended multiple to 3.9×, masking monopoly assets that belong at 10–13×. Nobody on AIM can see through the noise. <strong>But Aurelius can.</strong></div>
+  <div class="nr">In March 2026, <strong>the board sold PHFC (the Gosport Ferry) to Collins River / Uber Boat at 12.6× pre-IFRS 16 EBITDA</strong> — a closed transaction, not a projection. The £11.6m of proceeds now sit on the balance sheet. Post-disposal EV compresses to £15.4m. The remaining portfolio can be acquired at <em>4.7× rump EBITDA</em>. That's the entry. That's everything.</div>
+
+  <div class="bn-row">
+    <div class="bn"><div class="bv gd">12.6×</div><div class="bl2">PHFC Sold At</div><div class="bs">Closed. Validated.</div></div>
+    <div class="bn-arrow">→</div>
+    <div class="bn"><div class="bv gd">4.7×</div><div class="bl2">Rump Available At</div><div class="bs">Implied entry</div></div>
+    <div class="bn-arrow">=</div>
+    <div class="bn"><div class="bv gn">7.9</div><div class="bl2">Turn Gap</div><div class="bs">The mispricing</div></div>
+  </div>
+
+  <div class="sc">
+    <div class="sh"><span class="sn">A</span><span class="st2">Transaction Snapshot</span></div>
+    <div class="cd"><div class="tw"><table>
+      <thead><tr><th>Item</th><th class="n">£k</th><th>Notes</th></tr></thead><tbody>
+      <tr><td>Market capitalisation</td><td class="n">33,500</td><td class="dm">12.5m shares × 268p</td></tr>
+      <tr><td>Take-private premium</td><td class="n">30%</td><td class="dm">Standard UK small-cap P2P</td></tr>
+      <tr><td>Total equity consideration</td><td class="n b">43,550</td><td></td></tr>
+      <tr><td>Net cash acquired (post-PHFC)</td><td class="n gr">(18,066)</td><td class="dm">FY24 cash + £11.6m PHFC − £1.4m debt</td></tr>
+      <tr><td>Restructuring reserve</td><td class="n rd">3,800</td><td class="dm">Per Strip Feasibility base case</td></tr>
+      <tr class="tot"><td>Net effective cost for rump</td><td class="n ac">29,284</td><td class="dm">What you pay for the keepable business</td></tr>
+      <tr class="sp"><td colspan="3"></td></tr>
+      <tr><td>Rump EBITDA (pre-IFRS 16)</td><td class="n b">6,206</td><td class="dm">FIC + Momart + overhead (excl. PHFC)</td></tr>
+      <tr><td>Implied rump EV / EBITDA</td><td class="n ac">4.7×</td><td class="dm">Net cost ÷ rump EBITDA</td></tr>
+      <tr><td>Good-part UFCF (annual)</td><td class="n gr">4,391</td><td class="dm">After tax, maint capex, WC</td></tr>
+      <tr><td>EV / Good UFCF</td><td class="n">6.7×</td><td class="dm">Net cost ÷ rump UFCF</td></tr>
+    </tbody></table></div></div>
+  </div>
+
+  <div class="sc">
+    <div class="sh"><span class="sn">B</span><span class="st2">Return Analysis — 5-Year Hold</span></div>
+    <div class="sd">Sponsor equity of £12.7m. 22% cash yield. 4.6-year payback. Even the bear case delivers 2.6× / 21.2% — with no re-rating, no separation, no pricing actions. Pure downside protection from cash flow.</div>
+    <div class="cd"><div class="tw"><table>
+      <thead><tr><th>Scenario</th><th class="n">Entry (£m)</th><th class="n">Exit Multiple</th><th class="n">Exit Equity (£m)</th><th class="n">MoIC</th><th class="n">IRR</th></tr></thead><tbody>
+      <tr><td>Bear case (8×)</td><td class="n">17.4</td><td class="n">8.0×</td><td class="n">45.5</td><td class="n">2.6×</td><td class="n">21.2%</td></tr>
+      <tr class="hl"><td class="b">Base — no re-rating (10×)</td><td class="n b">17.4</td><td class="n b">10.0×</td><td class="n b">59.0</td><td class="n ac">3.4×</td><td class="n ac">27.6%</td></tr>
+      <tr><td>Partial expansion (12×)</td><td class="n">17.4</td><td class="n">12.0×</td><td class="n">72.5</td><td class="n gr">4.2×</td><td class="n gr">33.0%</td></tr>
+      <tr><td>Full separation (13.5×)</td><td class="n">17.4</td><td class="n">13.5×</td><td class="n">82.6</td><td class="n gr">4.7×</td><td class="n gr">36.5%</td></tr>
+    </tbody></table></div></div>
+  </div>
+</div>
+
+<!-- ═══════ FRANCHISES ═══════ -->
+<div class="pn" id="franchises">
+  <div class="hq">"Three irreplaceable franchises.<br>Geography, monopoly, and structural demand floors."</div>
+  <div class="ha">What the market doesn't see</div>
+  <div class="nr">The market sees a £52m conglomerate at 3.9× and moves on. What it misses: <strong>£6,496k of EBITDA comes from monopoly rump assets</strong> at 4.0×, while the strip contributes only £280k at 94×. You're paying nothing for the noise. The rump has <em>stronger</em> monopoly characteristics than PHFC.</div>
+
+  <div class="g3" style="margin-bottom:36px;">
+    <div class="fc" style="border-top:3px solid var(--em);">
+      <div class="fc-top"><div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--cream);">Falkland Islands Co.</div><div style="font-size:10.5px;color:var(--dim);margin-top:2px;">175 years · 8,000 miles from competition</div></div>
+      <div class="fc-body"><div class="fc-tag"><span class="tg core">Core · Monopoly</span><span class="fc-ebitda gr">EBITDA £2,866k</span></div><div class="fc-rev">Revenue: £29.0m</div><div class="fc-desc">The only game in town. Retail, shipping, property — all captive. CPI rents. <span class="rd">FBS (£10.3m) poisons the optic</span> — strip it and the monopoly shines.</div></div>
+    </div>
+    <div class="fc" style="border-top:3px solid var(--az);">
+      <div class="fc-top"><div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--cream);">Momart</div><div style="font-size:10.5px;color:var(--dim);margin-top:2px;">51 years · The Tate & Royal Collection trust this firm</div></div>
+      <div class="fc-body"><div class="fc-tag"><span class="tg core">Core · High Switching</span><span class="fc-ebitda gr">EBITDA £2,014k</span></div><div class="fc-rev">Revenue: £19.2m · Storage fill: 85.2%</div><div class="fc-desc">You don't move a Picasso on a whim. Multi-year contracts, near-zero churn. <span class="rd">Exhibitions (£9.0m) is the drag</span> — strip it and this is infrastructure.</div></div>
+    </div>
+    <div class="fc" style="border-top:3px solid var(--vi);opacity:.75;">
+      <div class="fc-top"><div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--cream);">PHFC — Gosport Ferry</div><div style="font-size:10.5px;color:var(--vi);margin-top:2px;">✓ SOLD — Sets the benchmark</div></div>
+      <div class="fc-body"><div class="fc-tag"><span class="tg sold">Disposed · 12.6×</span><span class="fc-ebitda" style="color:var(--vi);">£11.6m proceeds</span></div><div class="fc-rev">EBITDA: £1,209k · 2.0m passengers · 99.5% uptime</div><div class="fc-desc">Statutory monopoly. CPI fares. Profitable every period. Collins River / Uber Boat paid 12.6×. <em>Closed transaction. The benchmark is set.</em></div></div>
+    </div>
+  </div>
+
+  <div class="sc">
+    <div class="sh"><span class="sn">01</span><span class="st2">Good vs. Bad — Quality Decomposition</span></div>
+    <div class="cd"><div class="tw"><table>
+      <thead><tr><th>Metric</th><th class="n">Good (Rump)</th><th class="n">Bad (Strip)</th><th class="n">Group</th></tr></thead><tbody>
+      <tr><td>Revenue (£k)</td><td class="n">44,477</td><td class="n">19,384</td><td class="n">63,861</td></tr>
+      <tr><td>Gross Profit (£k)</td><td class="n">18,026</td><td class="n">4,715</td><td class="n">22,741</td></tr>
+      <tr><td>EBIT (£k)</td><td class="n">4,585</td><td class="n rd">(150)</td><td class="n">4,435</td></tr>
+      <tr><td>EBITDA (£k)</td><td class="n b">6,496</td><td class="n">280</td><td class="n b">6,776</td></tr>
+      <tr><td>Unlevered FCF (£k)</td><td class="n gr">4,391</td><td class="n rd">(220)</td><td class="n">4,171</td></tr>
+      <tr class="sp"><td colspan="4"></td></tr>
+      <tr><td>EV / EBITDA</td><td class="n ac">4.0×</td><td class="n rd">93.6×</td><td class="n">3.9×</td></tr>
+      <tr><td>EV / UFCF</td><td class="n ac">6.0×</td><td class="n dm">n/m</td><td class="n">6.3×</td></tr>
+    </tbody></table></div></div>
+    <div class="co green"><strong>Rump at 10× = £64,960k</strong> vs. current EV £26.2m = +148% upside.</div>
+  </div>
+
+  <div class="sc">
+    <div class="sh"><span class="sn">02</span><span class="st2">Business Classification</span></div>
+    <div class="cd"><div class="tw"><table>
+      <thead><tr><th>Business</th><th>Stream</th><th class="n">Rev (£k)</th><th>Cat.</th><th>Status</th><th>Rationale</th></tr></thead><tbody>
+      <tr><td>FIC – Retail</td><td>Retail</td><td class="n">10,721</td><td>Stable</td><td><span class="tg core">Core</span></td><td class="dm">Monopoly grocery/DIY in Stanley</td></tr>
+      <tr><td>FIC – Support</td><td>Shipping/agency</td><td class="n">3,752</td><td>Stable</td><td><span class="tg core">Core</span></td><td class="dm">Recurring essential services</td></tr>
+      <tr><td>FIC – Property</td><td>Rental</td><td class="n">993</td><td>Infra</td><td><span class="tg infra">Infra</span></td><td class="dm">CPI-linked, captive</td></tr>
+      <tr><td>FIC – Auto</td><td>4×4</td><td class="n">2,696</td><td>Cyclical</td><td><span class="tg warn">Non-Core</span></td><td class="dm">Discretionary</td></tr>
+      <tr><td>FIC – FBS</td><td>Construction</td><td class="n">10,339</td><td>Volatile</td><td><span class="tg strip">Strip</span></td><td class="dm">Loss-making; wind-down</td></tr>
+      <tr><td>FITC</td><td>UK procurement</td><td class="n">10,924</td><td>Stable</td><td><span class="tg core">Core</span></td><td class="dm">Within FIC consolidated</td></tr>
+      <tr><td>Momart – Exhibitions</td><td>Museum installs</td><td class="n">9,045</td><td>Volatile</td><td><span class="tg strip">Strip</span></td><td class="dm">Cost overruns; wind-down</td></tr>
+      <tr><td>Momart – Galleries</td><td>Private logistics</td><td class="n">7,358</td><td>Semi-rec.</td><td><span class="tg warn">Non-Core</span></td><td class="dm">Sticky, non-contracted</td></tr>
+      <tr><td>Momart – Storage</td><td>Long-term</td><td class="n">2,837</td><td>Infra</td><td><span class="tg infra">Infra</span></td><td class="dm">Multi-year, zero churn</td></tr>
+      <tr><td>Gosport Ferry</td><td>Transport</td><td class="n">4,177</td><td>Infra</td><td><span class="tg sold">Disposed</span></td><td class="dm">Sold Mar 2026 £11.6m</td></tr>
+    </tbody></table></div></div>
+  </div>
+</div>
+
+<!-- ═══════ SEGMENTAL ═══════ -->
+<div class="pn" id="numbers">
+  <div class="hq">"Follow the money through six years of accounts."</div>
+  <div class="ha">FY2020–FY2025 · All figures £'000</div>
+  <div class="sc"><div class="sh"><span class="sn">A</span><span class="st2">Consolidated P&L</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>£'000</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>Revenue</td><td class="n">44,600</td><td class="n">32,578</td><td class="n">40,319</td><td class="n">52,712</td><td class="n b">52,460</td><td class="n">40,850</td></tr>
+    <tr><td>Cost of sales</td><td class="n">(26,521)</td><td class="n">(19,437)</td><td class="n">(23,405)</td><td class="n">(31,588)</td><td class="n">(30,000)</td><td class="n">(27,226)</td></tr>
+    <tr><td>Gross profit</td><td class="n">18,079</td><td class="n">13,141</td><td class="n">16,914</td><td class="n">21,124</td><td class="n b">22,460</td><td class="n">13,624</td></tr>
+    <tr><td>Op expenses</td><td class="n">(20,993)</td><td class="n">(12,058)</td><td class="n">(14,134)</td><td class="n">(17,190)</td><td class="n">(18,815)</td><td class="n">(19,359)</td></tr>
+    <tr class="sub"><td>Operating profit</td><td class="n rd">(2,914)</td><td class="n">1,083</td><td class="n">2,780</td><td class="n">3,934</td><td class="n">3,645</td><td class="n rd">(5,735)</td></tr>
+    <tr><td>Finance cost</td><td class="n">(856)</td><td class="n">(881)</td><td class="n">(796)</td><td class="n">(795)</td><td class="n">(883)</td><td class="n">(914)</td></tr>
+    <tr><td>PBT</td><td class="n rd">(3,770)</td><td class="n">202</td><td class="n">1,984</td><td class="n">4,046</td><td class="n">2,762</td><td class="n rd">(6,649)</td></tr>
+    <tr><td>Tax</td><td class="n">(958)</td><td class="n">(193)</td><td class="n">(1,037)</td><td class="n">(924)</td><td class="n">(796)</td><td class="n">1,518</td></tr>
+    <tr class="tot"><td>PAT</td><td class="n rd">(4,728)</td><td class="n">9</td><td class="n">947</td><td class="n">3,122</td><td class="n b">1,966</td><td class="n rd">(5,131)</td></tr>
+    <tr><td>EPS (p)</td><td class="n rd">(37.8)</td><td class="n">0.1</td><td class="n">7.6</td><td class="n">24.9</td><td class="n">15.7</td><td class="n rd">(41.0)</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">B</span><span class="st2">FY2024 Segmental</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Segment</th><th class="n">Rev</th><th class="n">OP</th><th class="n">OP%</th><th class="n">D&A</th><th class="n">EBITDA</th><th class="n">EBITDA%</th></tr></thead><tbody>
+    <tr><td>FIC</td><td class="n">29,028</td><td class="n">1,766</td><td class="n">6.1%</td><td class="n">1,073</td><td class="n">2,839</td><td class="n">9.8%</td></tr>
+    <tr><td>PHFC</td><td class="n">4,177</td><td class="n">856</td><td class="n">20.5%</td><td class="n">499</td><td class="n">1,355</td><td class="n">32.4%</td></tr>
+    <tr><td>Momart</td><td class="n">19,240</td><td class="n">1,394</td><td class="n">7.2%</td><td class="n">767</td><td class="n">2,161</td><td class="n">11.2%</td></tr>
+    <tr><td>Unallocated</td><td class="n">0</td><td class="n">0</td><td class="n">—</td><td class="n">237</td><td class="n">237</td><td class="n">—</td></tr>
+    <tr class="tot"><td>Group</td><td class="n">52,445</td><td class="n">4,016</td><td class="n">7.7%</td><td class="n">2,576</td><td class="n">6,592</td><td class="n">12.6%</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">C</span><span class="st2">Sub-Divisional Revenue</span></div>
+  <div class="g2">
+    <div class="cd"><div class="ch">FIC by Business Line</div><div class="tw"><table><thead><tr><th>Line</th><th class="n">£k</th><th class="n">Mix</th></tr></thead><tbody>
+      <tr><td>Retail Sales</td><td class="n">10,721</td><td class="n">37.2%</td></tr><tr><td>Construction (FBS)</td><td class="n rd">10,339</td><td class="n">35.9%</td></tr><tr><td>Support Services</td><td class="n">3,752</td><td class="n">13.0%</td></tr><tr><td>Automotive</td><td class="n">2,696</td><td class="n">9.4%</td></tr><tr><td>Property</td><td class="n">993</td><td class="n">3.4%</td></tr><tr><td>Consumer Finance</td><td class="n">298</td><td class="n">1.0%</td></tr><tr class="tot"><td>Total</td><td class="n">28,799</td><td class="n">100%</td></tr>
+    </tbody></table></div></div>
+    <div class="cd"><div class="ch">Momart by Class</div><div class="tw"><table><thead><tr><th>Class</th><th class="n">£k</th><th class="n">Mix</th></tr></thead><tbody>
+      <tr><td>Exhibitions</td><td class="n rd">9,045</td><td class="n">47.0%</td></tr><tr><td>Galleries</td><td class="n">7,358</td><td class="n">38.2%</td></tr><tr><td>Storage</td><td class="n gr">2,837</td><td class="n">14.7%</td></tr><tr class="tot"><td>Total</td><td class="n">19,240</td><td class="n">100%</td></tr>
+    </tbody></table></div></div>
+  </div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">D</span><span class="st2">Geography & Recognition</span></div>
+  <div class="g2">
+    <div class="cd"><div class="ch">Revenue by Geography</div><div class="tw"><table><thead><tr><th>Geo</th><th class="n">£k</th><th class="n">Mix</th></tr></thead><tbody>
+      <tr><td>UK</td><td class="n">23,432</td><td class="n">44.7%</td></tr><tr><td>Falklands</td><td class="n">29,028</td><td class="n">55.3%</td></tr><tr class="tot"><td>Total</td><td class="n">52,460</td><td class="n">100%</td></tr>
+    </tbody></table></div></div>
+    <div class="cd"><div class="ch">Recognition Type</div><div class="tw"><table><thead><tr><th>Type</th><th class="n">£k</th><th class="n">Mix</th></tr></thead><tbody>
+      <tr><td>Goods — Point in Time</td><td class="n">12,584</td><td class="n">24.0%</td></tr><tr><td>Services — Point in Time</td><td class="n">23,651</td><td class="n">45.1%</td></tr><tr><td>Services — Over Time</td><td class="n">16,225</td><td class="n">30.9%</td></tr><tr class="tot"><td>Total</td><td class="n">52,460</td><td class="n">100%</td></tr>
+    </tbody></table></div></div>
+  </div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">E</span><span class="st2">KPIs</span></div>
+  <div class="g2">
+    <div class="cd"><div class="ch">FIC</div><div class="tw"><table><thead><tr><th>KPI</th><th class="n">FY24</th><th>Trend</th></tr></thead><tbody>
+      <tr><td>Staff (FTE)</td><td class="n">224</td><td class="dm">▲ from 180</td></tr><tr><td>Capex (£k)</td><td class="n">1,337</td><td class="dm">▼ from £2,694k</td></tr><tr><td>Properties</td><td class="n">88</td><td class="dm">▲ from 65</td></tr><tr><td>Occupancy</td><td class="n">90.0%</td><td class="dm">Stable</td></tr><tr><td>Squid (000s t)</td><td class="n">112.3</td><td class="dm">▲</td></tr><tr><td>Cruise Pax (000s)</td><td class="n">73.2</td><td class="dm">Recovering</td></tr><tr><td>Retail Growth</td><td class="n gr">8.1%</td><td class="dm">Strong</td></tr>
+    </tbody></table></div></div>
+    <div class="cd"><div class="ch">Momart</div><div class="tw"><table><thead><tr><th>KPI</th><th class="n">FY24</th></tr></thead><tbody>
+      <tr><td>Staff (FTE)</td><td class="n">133</td></tr><tr><td>Capex (£k)</td><td class="n">769</td></tr><tr><td>Warehouse Fill</td><td class="n">85.2%</td></tr><tr><td>Charged Out (£k)</td><td class="n">11,700</td></tr><tr><td>Overseas Rev (£k)</td><td class="n">7,200</td></tr><tr><td>Payroll (£k)</td><td class="n">7,132</td></tr>
+    </tbody></table></div></div>
+  </div></div>
+</div>
+
+<!-- ═══════ VALUATION ═══════ -->
+<div class="pn" id="valuation">
+  <div class="hq">"A closed transaction. Not a model.<br>The <em>market</em> set the multiple."</div>
+  <div class="ha">PHFC disposal anchors every number that follows</div>
+
+  <div class="sc"><div class="sh"><span class="sn">A</span><span class="st2">PHFC Transaction & Equity Bridge</span></div>
+  <div class="g2">
+    <div class="cd"><div class="ch">PHFC Detail</div><div class="tw"><table><thead><tr><th>Item</th><th class="n">Value</th></tr></thead><tbody>
+      <tr><td>Proceeds (equity)</td><td class="n">£11,620k</td></tr><tr><td>EBITDA pre-IFRS 16</td><td class="n">£1,209k</td></tr><tr><td>EBITDA incl. IFRS 16</td><td class="n">£1,355k</td></tr><tr><td>Net debt</td><td class="n">£3,611k</td></tr><tr class="tot"><td>Implied EV</td><td class="n ac">£15,231k</td></tr><tr><td>EV/EBITDA (pre-IFRS 16)</td><td class="n ac">12.6×</td></tr><tr><td>EV/EBITDA (incl.)</td><td class="n">11.2×</td></tr>
+    </tbody></table></div></div>
+    <div class="cd"><div class="ch">Equity Bridge</div><div class="tw"><table><thead><tr><th></th><th class="n">Pre</th><th class="n">Post</th></tr></thead><tbody>
+      <tr><td>Cash (£k)</td><td class="n">7,846</td><td class="n gr">19,466</td></tr><tr><td>Debt (£k)</td><td class="n">(1,400)</td><td class="n">(1,400)</td></tr><tr><td>Net cash (£k)</td><td class="n">6,446</td><td class="n gr">18,066</td></tr><tr><td>Mkt cap (£m)</td><td class="n">33.5</td><td class="n">33.5</td></tr><tr class="tot"><td>EV (£m)</td><td class="n">27.1</td><td class="n ac">15.4</td></tr>
+    </tbody></table></div></div>
+  </div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">B</span><span class="st2">Capital Structure</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Item</th><th class="n">£k</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Total consideration</td><td class="n b">43,550</td><td class="dm">Mkt cap × 1.3</td></tr>
+    <tr><td>Sponsor equity</td><td class="n ac">12,742</td><td class="dm">50% of gap</td></tr>
+    <tr><td>Debt drawn</td><td class="n">12,742</td><td class="dm">50% of gap</td></tr>
+    <tr><td>Interest rate</td><td class="n">7.5%</td><td class="dm">UK mid-market</td></tr>
+    <tr><td>EBITDA / Interest</td><td class="n gr">6.8×</td><td class="dm">≥3.0× req.</td></tr>
+    <tr><td>ND / EBITDA</td><td class="n gr">2.0×</td><td class="dm">≤2.5× target</td></tr>
+    <tr class="sp"><td colspan="3"></td></tr>
+    <tr><td>Cash yield on equity</td><td class="n ac">22%</td><td></td></tr>
+    <tr><td>Payback</td><td class="n ac">4.6 yrs</td><td></td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">C</span><span class="st2">FCF — 5-Year Hold</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Item</th><th class="n">Yr1</th><th class="n">Yr2</th><th class="n">Yr3</th><th class="n">Yr4</th><th class="n">Yr5</th></tr></thead><tbody>
+    <tr><td>EBITDA</td><td class="n">6,206</td><td class="n">6,392</td><td class="n">6,584</td><td class="n">6,781</td><td class="n">6,985</td></tr>
+    <tr><td>D&A</td><td class="n">(1,720)</td><td class="n">(1,720)</td><td class="n">(1,720)</td><td class="n">(1,720)</td><td class="n">(1,720)</td></tr>
+    <tr><td>EBIT</td><td class="n">4,486</td><td class="n">4,672</td><td class="n">4,864</td><td class="n">5,061</td><td class="n">5,265</td></tr>
+    <tr><td>Tax (23%)</td><td class="n">(1,032)</td><td class="n">(1,075)</td><td class="n">(1,119)</td><td class="n">(1,164)</td><td class="n">(1,211)</td></tr>
+    <tr><td>NOPAT</td><td class="n">3,454</td><td class="n">3,598</td><td class="n">3,745</td><td class="n">3,897</td><td class="n">4,054</td></tr>
+    <tr><td>+D&A</td><td class="n">1,720</td><td class="n">1,720</td><td class="n">1,720</td><td class="n">1,720</td><td class="n">1,720</td></tr>
+    <tr><td>Maint capex</td><td class="n">(850)</td><td class="n">(850)</td><td class="n">(870)</td><td class="n">(890)</td><td class="n">(910)</td></tr>
+    <tr><td>Growth capex</td><td class="n">0</td><td class="n">(200)</td><td class="n">(300)</td><td class="n">(200)</td><td class="n">0</td></tr>
+    <tr><td>WC</td><td class="n">(200)</td><td class="n">(100)</td><td class="n">(100)</td><td class="n">(100)</td><td class="n">(50)</td></tr>
+    <tr class="tot"><td>UFCF</td><td class="n gr">4,124</td><td class="n gr">4,168</td><td class="n gr">4,195</td><td class="n gr">4,427</td><td class="n gr">4,814</td></tr>
+    <tr><td>FCF yield</td><td class="n">6.9%</td><td class="n">6.9%</td><td class="n">7.0%</td><td class="n">7.4%</td><td class="n">8.0%</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">D</span><span class="st2">Sensitivity — Equity Value (£m)</span></div>
+  <div class="note" style="margin:-8px 0 12px;font-style:normal;color:var(--fog);font-size:12px;">ND=£11.4m · Restructuring=£4m · Equity=(EBITDA×Mult/1000)−15.4</div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>EBITDA↓ / Mult→</th><th class="n">7.0×</th><th class="n">8.0×</th><th class="n">9.0×</th><th class="n">10.0×</th><th class="n">11.0×</th><th class="n">12.0×</th><th class="n">13.0×</th></tr></thead><tbody>
+    <tr><td class="b">4,500</td><td class="n slo">16.1</td><td class="n slo">20.6</td><td class="n smi">25.1</td><td class="n smi">29.6</td><td class="n shi">34.1</td><td class="n shi">38.6</td><td class="n shi">43.1</td></tr>
+    <tr><td class="b">5,000</td><td class="n slo">19.6</td><td class="n smi">24.6</td><td class="n smi">29.6</td><td class="n shi">34.6</td><td class="n shi">39.6</td><td class="n shi">44.6</td><td class="n shi">49.6</td></tr>
+    <tr><td class="b">5,500</td><td class="n smi">23.1</td><td class="n smi">28.6</td><td class="n shi">34.1</td><td class="n shi">39.6</td><td class="n shi">45.1</td><td class="n shi">50.6</td><td class="n shi">56.1</td></tr>
+    <tr><td class="b">6,000</td><td class="n smi">26.6</td><td class="n shi">32.6</td><td class="n shi">38.6</td><td class="n shl">44.6</td><td class="n shi">50.6</td><td class="n shi">56.6</td><td class="n shi">62.6</td></tr>
+    <tr><td class="b">6,500</td><td class="n shi">30.1</td><td class="n shi">36.6</td><td class="n shi">43.1</td><td class="n shi">49.6</td><td class="n shi">56.1</td><td class="n shi">62.6</td><td class="n shi">69.1</td></tr>
+    <tr><td class="b">7,000</td><td class="n shi">33.6</td><td class="n shi">40.6</td><td class="n shi">47.6</td><td class="n shi">54.6</td><td class="n shi">61.6</td><td class="n shi">68.6</td><td class="n shi">75.6</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">E</span><span class="st2">Corporate Discount</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th></th><th class="n">Pre-Disposal</th><th class="n">Post-Disposal</th></tr></thead><tbody>
+    <tr><td>SoTP at 10× (£m)</td><td class="n">62.1</td><td class="n">47.8</td></tr>
+    <tr><td>Market EV (£m)</td><td class="n">27.1</td><td class="n">15.4</td></tr>
+    <tr class="tot"><td>Discount</td><td class="n rd">56%</td><td class="n rd">68%</td></tr>
+  </tbody></table></div></div></div>
+</div>
+
+<!-- ═══════ RESTRUCTURING ═══════ -->
+<div class="pn" id="restructuring">
+  <div class="hq">"Close the cash destroyers.<br>The first domino has already fallen."</div>
+  <div class="ha">PHFC disposed · FBS + Exhibitions next</div>
+
+  <div class="g3" style="margin:32px 0;">
+    <div class="sb gn"><div class="sl">PHFC (Done ✓)</div><div class="sv gn">£11.6m</div><div class="ss">12.6× · Collins River</div></div>
+    <div class="sb" style="border-top:3px solid var(--sc);"><div class="sl">FBS Wind-Down</div><div class="sv" style="color:var(--sc);">£2,650k</div><div class="ss">Base case</div></div>
+    <div class="sb gd"><div class="sl">Exhibitions Wind-Down</div><div class="sv" style="color:var(--am);">£1,150k</div><div class="ss">Base case</div></div>
+  </div>
+
+  <div class="sc"><div class="sh"><span class="sn">01</span><span class="st2">Wind-Down Costs</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Item</th><th class="n">Base</th><th class="n">Stress</th><th class="n">Bear</th><th>Timing</th></tr></thead><tbody>
+    <tr class="slbl"><td colspan="5">FBS Construction</td></tr>
+    <tr><td class="in">MOD/FIG completion</td><td class="n">1,200</td><td class="n">1,800</td><td class="n">2,500</td><td class="dm">6–12m</td></tr>
+    <tr><td class="in">Redundancy (15)</td><td class="n">450</td><td class="n">600</td><td class="n">750</td><td class="dm">0–3m</td></tr>
+    <tr><td class="in">Onerous provisions</td><td class="n">800</td><td class="n">1,200</td><td class="n">1,800</td><td class="dm">12–24m</td></tr>
+    <tr><td class="in">Subcontractor claims</td><td class="n">0</td><td class="n">400</td><td class="n">900</td><td class="dm">12–36m</td></tr>
+    <tr><td class="in">Asset write-downs</td><td class="n">200</td><td class="n">350</td><td class="n">500</td><td class="dm">0–6m</td></tr>
+    <tr class="sub"><td>Total FBS</td><td class="n">2,650</td><td class="n">4,350</td><td class="n">6,450</td><td></td></tr>
+    <tr class="slbl"><td colspan="5">Momart Exhibitions</td></tr>
+    <tr><td class="in">Labour redundancy</td><td class="n">600</td><td class="n">800</td><td class="n">1,000</td><td class="dm">0–3m</td></tr>
+    <tr><td class="in">Project costs</td><td class="n">400</td><td class="n">650</td><td class="n">900</td><td class="dm">3–12m</td></tr>
+    <tr><td class="in">Stranded overhead</td><td class="n">0</td><td class="n">200</td><td class="n">400</td><td class="dm">12–24m</td></tr>
+    <tr><td class="in">Equipment</td><td class="n">150</td><td class="n">250</td><td class="n">400</td><td class="dm">0–6m</td></tr>
+    <tr class="sub"><td>Total Exhibitions</td><td class="n">1,150</td><td class="n">1,900</td><td class="n">2,700</td><td></td></tr>
+    <tr class="tot"><td>Total Restructuring</td><td class="n ac">3,800</td><td class="n">6,250</td><td class="n rd">9,150</td><td></td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">02</span><span class="st2">Rump EBITDA Build</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Line</th><th class="n">£k</th><th>Notes</th></tr></thead><tbody>
+    <tr class="slbl"><td colspan="3">FIC (excl. FBS)</td></tr>
+    <tr><td class="in">EBIT verified</td><td class="n">2,216</td><td class="dm">FY24</td></tr>
+    <tr><td class="in">FBS strip-out</td><td class="n">50</td><td class="dm">Loss adds back</td></tr>
+    <tr><td class="in">D&A</td><td class="n">700</td><td class="dm">PPE heavy</td></tr>
+    <tr class="sub"><td>FIC EBITDA</td><td class="n ac">2,866</td><td></td></tr>
+    <tr class="slbl"><td colspan="3">Momart (excl. Exhibitions)</td></tr>
+    <tr><td class="in">EBIT verified</td><td class="n">1,394</td><td class="dm">FY24</td></tr>
+    <tr><td class="in">Exhibitions strip</td><td class="n">(100)</td><td class="dm">Loss adds back</td></tr>
+    <tr><td class="in">D&A pre-IFRS 16</td><td class="n">520</td><td class="dm">Leyton = op lease</td></tr>
+    <tr class="sub"><td>Momart EBITDA</td><td class="n ac">2,014</td><td></td></tr>
+    <tr><td class="in">PLC overhead</td><td class="n">(100)</td><td class="dm">AIM saving not in base</td></tr>
+    <tr class="tot"><td>Rump EBITDA</td><td class="n ac">6,206</td><td></td></tr>
+    <tr><td class="mu" style="font-style:italic;">Post-PHFC disposal</td><td class="n dm">4,780</td><td class="dm">Excl. PHFC £1,426k</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">03</span><span class="st2">Four Value Creation Pillars</span></div>
+  <div class="g2">
+    <div class="pl"><div class="plx">A</div><h4>Close the Cash Destroyers</h4><div class="pi">+£1.5–2.0m p.a.</div><div class="pt">Months 1–12</div><p>FBS: complete MOD/FIG then wind down. Momart Exhibitions restructuring. EBIT improvement £1–1.5m.</p></div>
+    <div class="pl"><div class="plx">B</div><h4>Eliminate Conglomerate Discount</h4><div class="pi">+£0.4m p.a.</div><div class="pt">Months 3–6</div><p>AIM listing costs ~£0.4m. No fund mandate covers all three. Blended exit: 10–13.5× vs 3.9×.</p></div>
+    <div class="pl"><div class="plx">C</div><h4>Monopoly Pricing</h4><div class="pi">+£375–535k p.a.</div><div class="pt">Years 1–3</div><p>FIC Retail: ~7% margin, zero elasticity. Property: below market. Shipping: monopoly port.</p></div>
+    <div class="pl"><div class="plx">D</div><h4>Separation to Buyers</h4><div class="pi">+£10–25m EV</div><div class="pt">Years 2–5</div><p>Momart: Iron Mountain, Hasenkamp (12–16×). FIC: BOT specialist, Gulf SWF (9–12×).</p></div>
+  </div>
+  <div class="co"><strong>Separation total (mid): £61–75m</strong> vs mkt cap £33.5m = +82–124%.</div></div>
+</div>
+
+<!-- ═══════ SUBSIDIARIES ═══════ -->
+<div class="pn" id="entities">
+  <div class="hq">"Beneath the group accounts,<br>six entities tell the real story."</div>
+  <div class="ha">Hidden tab data · Statutory filings FY2019–FY2025</div>
+  <div class="sc"><div class="sh"><span class="sn">01</span><span class="st2">Group Balance Sheet & Cash Flow</span></div>
+  <div class="cd" style="margin-bottom:16px;"><div class="ch">Balance Sheet</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>NCA</td><td class="n">53,959</td><td class="n">53,343</td><td class="n">53,811</td><td class="n">53,956</td><td class="n">53,353</td><td class="n">51,712</td></tr>
+    <tr><td>CA</td><td class="n">23,774</td><td class="n">26,853</td><td class="n">24,770</td><td class="n">30,262</td><td class="n">27,738</td><td class="n">20,111</td></tr>
+    <tr class="sub"><td>Assets</td><td class="n">77,733</td><td class="n">80,196</td><td class="n">78,581</td><td class="n">84,243</td><td class="n b">81,091</td><td class="n">71,823</td></tr>
+    <tr><td>Liabilities</td><td class="n">(38,941)</td><td class="n">(41,300)</td><td class="n">(37,924)</td><td class="n">(40,244)</td><td class="n">(36,005)</td><td class="n">(33,891)</td></tr>
+    <tr class="tot"><td>Net assets</td><td class="n">38,792</td><td class="n">38,896</td><td class="n">40,657</td><td class="n">43,974</td><td class="n b">45,086</td><td class="n">37,932</td></tr>
+  </tbody></table></div></div>
+  <div class="cd"><div class="ch">Cash Flow</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>Op before WC</td><td class="n">6,877</td><td class="n">3,400</td><td class="n">5,175</td><td class="n">6,465</td><td class="n">6,300</td><td class="n rd">(2,910)</td></tr>
+    <tr><td>WC</td><td class="n">(1,444)</td><td class="n">495</td><td class="n">291</td><td class="n">1,414</td><td class="n">(3,137)</td><td class="n">7,868</td></tr>
+    <tr class="sub"><td>Net operating</td><td class="n">4,677</td><td class="n">3,733</td><td class="n">5,111</td><td class="n">7,535</td><td class="n">2,009</td><td class="n">4,083</td></tr>
+    <tr><td>Net investing</td><td class="n">(3,375)</td><td class="n">(1,600)</td><td class="n">(2,562)</td><td class="n">(1,606)</td><td class="n">(2,034)</td><td class="n">(1,508)</td></tr>
+    <tr><td>Net financing</td><td class="n">1,568</td><td class="n">3,318</td><td class="n">(7,520)</td><td class="n">(2,675)</td><td class="n">(3,106)</td><td class="n">(4,339)</td></tr>
+    <tr class="tot"><td>Year-end cash</td><td class="n ac">9,108</td><td class="n ac">14,556</td><td class="n ac">9,572</td><td class="n ac">12,800</td><td class="n ac">9,650</td><td class="n ac">7,846</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">02</span><span class="st2">Entity P&Ls</span></div>
+  <div class="cd" style="margin-bottom:12px;"><div class="ch">FIC Ltd (Consolidated — includes FITC)</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY19</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>Turnover</td><td class="n">17,183</td><td class="n">21,273</td><td class="n">20,445</td><td class="n">21,407</td><td class="n">28,904</td><td class="n b">28,799</td><td class="n">16,511</td></tr>
+    <tr><td>Op profit</td><td class="n">626</td><td class="n">1,084</td><td class="n">1,241</td><td class="n">889</td><td class="n">862</td><td class="n">692</td><td class="n rd">(8,498)</td></tr>
+    <tr><td>PAT</td><td class="n">391</td><td class="n">789</td><td class="n">825</td><td class="n">508</td><td class="n">461</td><td class="n">256</td><td class="n rd">(6,611)</td></tr>
+    <tr><td>Net assets</td><td class="n">1,582</td><td class="n">2,488</td><td class="n">3,111</td><td class="n">3,794</td><td class="n">4,632</td><td class="n">4,961</td><td class="n rd">(1,544)</td></tr>
+  </tbody></table></div></div>
+  <div class="cd" style="margin-bottom:12px;"><div class="ch">FITC Ltd (ref — within FIC)</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>Turnover</td><td class="n">9,489</td><td class="n">9,351</td><td class="n">8,259</td><td class="n">9,020</td><td class="n b">10,924</td><td class="n">6,104</td></tr>
+    <tr><td>PBT</td><td class="n">289</td><td class="n">381</td><td class="n">348</td><td class="n">433</td><td class="n">450</td><td class="n">402</td></tr>
+    <tr><td>Net assets</td><td class="n">1,853</td><td class="n">2,230</td><td class="n">2,536</td><td class="n">2,883</td><td class="n">3,190</td><td class="n">3,502</td></tr>
+  </tbody></table></div></div>
+  <div class="cd" style="margin-bottom:12px;"><div class="ch">Momart Ltd</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY19</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>Turnover</td><td class="n">20,607</td><td class="n">18,804</td><td class="n">10,259</td><td class="n">15,598</td><td class="n">19,528</td><td class="n b">19,240</td><td class="n">19,568</td></tr>
+    <tr><td>Op profit</td><td class="n">1,759</td><td class="n">1,268</td><td class="n rd">(475)</td><td class="n">1,085</td><td class="n">1,234</td><td class="n">658</td><td class="n">364</td></tr>
+    <tr><td>PAT</td><td class="n">1,394</td><td class="n">573</td><td class="n rd">(938)</td><td class="n">460</td><td class="n">737</td><td class="n">193</td><td class="n rd">(191)</td></tr>
+    <tr><td>Net assets</td><td class="n">4,712</td><td class="n">4,112</td><td class="n">3,154</td><td class="n">3,630</td><td class="n">4,338</td><td class="n">4,502</td><td class="n">4,282</td></tr>
+  </tbody></table></div></div>
+  <div class="cd" style="margin-bottom:12px;"><div class="ch">Gosport Ferry Ltd</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>Turnover</td><td class="n">4,109</td><td class="n">1,444</td><td class="n">3,066</td><td class="n">3,817</td><td class="n b">4,177</td><td class="n">4,280</td></tr>
+    <tr><td>Op profit</td><td class="n">491</td><td class="n rd">(1,339)</td><td class="n rd">(171)</td><td class="n">428</td><td class="n">980</td><td class="n gr">1,042</td></tr>
+    <tr><td>Net assets</td><td class="n">2,730</td><td class="n">1,157</td><td class="n">664</td><td class="n">1,033</td><td class="n">1,863</td><td class="n">2,471</td></tr>
+  </tbody></table></div></div>
+  <div class="g2">
+    <div class="cd"><div class="ch">PHC Ltd</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+      <tr><td>Rev</td><td class="n">295</td><td class="n">74</td><td class="n">198</td><td class="n">234</td><td class="n">75</td><td class="n">75</td></tr>
+      <tr><td>PBT</td><td class="n">164</td><td class="n">2</td><td class="n">86</td><td class="n">196</td><td class="n rd">(12)</td><td class="n rd">(18)</td></tr>
+      <tr><td>NA</td><td class="n">522</td><td class="n">524</td><td class="n">580</td><td class="n">737</td><td class="n">704</td><td class="n">690</td></tr>
+    </tbody></table></div></div>
+    <div class="cd"><div class="ch">CME Ltd</div><div class="tw"><table><thead><tr><th>£k</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+      <tr><td>Rev</td><td class="n">175</td><td class="n">184</td><td class="n">193</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+      <tr><td>PBT</td><td class="n">131</td><td class="n">143</td><td class="n">156</td><td class="n rd">(38)</td><td class="n rd">(43)</td><td class="n rd">(49)</td></tr>
+      <tr><td>NA</td><td class="n">268</td><td class="n">410</td><td class="n">530</td><td class="n">453</td><td class="n">393</td><td class="n">345</td></tr>
+    </tbody></table></div></div>
+  </div></div>
+</div>
+
+<!-- ═══════ RECONCILIATION ═══════ -->
+<div class="pn" id="recon">
+  <div class="hq">"Every pound traced. Every gap explained."</div>
+  <div class="ha">6 entities → FIH Group · No double-counts</div>
+  <div class="co"><strong>FIC Ltd is consolidated.</strong> Its £28.8m already includes FITC (£10.9m). Adding FITC separately = double-counting.</div>
+  <div class="sc"><div class="sh"><span class="sn">01</span><span class="st2">Revenue Reconciliation</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Rev (£k)</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>FIC (consol.)</td><td class="n">21,273</td><td class="n">20,445</td><td class="n">21,407</td><td class="n">28,904</td><td class="n b">28,799</td><td class="n">16,511</td></tr>
+    <tr><td class="in mu">↳ FITC (ref)</td><td class="n dm">9,489</td><td class="n dm">9,351</td><td class="n dm">8,259</td><td class="n dm">9,020</td><td class="n dm">10,924</td><td class="n dm">6,104</td></tr>
+    <tr><td>Momart</td><td class="n">18,804</td><td class="n">10,259</td><td class="n">15,598</td><td class="n">19,528</td><td class="n b">19,240</td><td class="n">19,568</td></tr>
+    <tr><td>Ferry</td><td class="n">4,109</td><td class="n">1,444</td><td class="n">3,066</td><td class="n">3,817</td><td class="n">4,177</td><td class="n">4,280</td></tr>
+    <tr><td>PHC</td><td class="n">295</td><td class="n">74</td><td class="n">198</td><td class="n">234</td><td class="n">75</td><td class="n">75</td></tr>
+    <tr><td>CME</td><td class="n">175</td><td class="n">184</td><td class="n">193</td><td class="n">0</td><td class="n">0</td><td class="n">0</td></tr>
+    <tr class="sub"><td>Entity sum</td><td class="n">44,656</td><td class="n">32,406</td><td class="n">40,462</td><td class="n">52,483</td><td class="n">52,291</td><td class="n">40,434</td></tr>
+    <tr class="sub"><td>FIH (truth)</td><td class="n">44,600</td><td class="n">32,578</td><td class="n">40,319</td><td class="n">52,712</td><td class="n">52,460</td><td class="n">40,850</td></tr>
+    <tr><td class="mu">Diff</td><td class="n dm">(56)</td><td class="n dm">172</td><td class="n dm">(143)</td><td class="n dm">229</td><td class="n dm">169</td><td class="n dm">416</td></tr>
+  </tbody></table></div></div>
+  <div class="note">FY24: +£169k (&lt;0.3%). Clean.</div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">02</span><span class="st2">OP Reconciliation</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>OP (£k)</th><th class="n">FY20</th><th class="n">FY21</th><th class="n">FY22</th><th class="n">FY23</th><th class="n">FY24</th><th class="n">FY25</th></tr></thead><tbody>
+    <tr><td>FIC</td><td class="n">1,084</td><td class="n">1,241</td><td class="n">889</td><td class="n">862</td><td class="n">692</td><td class="n rd">(8,498)</td></tr>
+    <tr><td>Momart</td><td class="n">1,268</td><td class="n rd">(475)</td><td class="n">1,085</td><td class="n">1,234</td><td class="n">658</td><td class="n">364</td></tr>
+    <tr><td>Ferry</td><td class="n">491</td><td class="n rd">(1,339)</td><td class="n rd">(171)</td><td class="n">428</td><td class="n">980</td><td class="n">1,042</td></tr>
+    <tr><td>PHC</td><td class="n">164</td><td class="n">2</td><td class="n">86</td><td class="n">196</td><td class="n rd">(12)</td><td class="n rd">(18)</td></tr>
+    <tr><td>CME</td><td class="n">131</td><td class="n">143</td><td class="n">156</td><td class="n rd">(38)</td><td class="n rd">(43)</td><td class="n rd">(49)</td></tr>
+    <tr class="sub"><td>Entity</td><td class="n">3,138</td><td class="n rd">(428)</td><td class="n">2,045</td><td class="n">2,682</td><td class="n">2,275</td><td class="n rd">(7,159)</td></tr>
+    <tr class="sub"><td>FIH</td><td class="n rd">(2,914)</td><td class="n">1,083</td><td class="n">2,780</td><td class="n">3,934</td><td class="n">3,645</td><td class="n rd">(5,735)</td></tr>
+    <tr><td class="mu">Diff</td><td class="n dm">(6,052)</td><td class="n dm">1,511</td><td class="n dm">735</td><td class="n dm">1,252</td><td class="n dm">1,370</td><td class="n dm">1,424</td></tr>
+  </tbody></table></div></div>
+  <div class="note">Gap = FRS102 vs IFRS (IFRS 16, IAS 19, goodwill). Not an error.</div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">03</span><span class="st2">Entity Tree</span></div>
+  <div class="cd"><div class="tree">
+    <span class="ac">FIH Group PLC</span> <span class="dm">— AIM (IFRS)</span><br>
+    <span style="padding-left:20px;">├─ <span class="gr">FIC Ltd</span> <span class="dm">— Consolidated (includes FITC)</span></span><br>
+    <span style="padding-left:40px;">│  └─ <span class="dm">FITC — DO NOT sum separately</span></span><br>
+    <span style="padding-left:20px;">├─ <span style="color:var(--az);">Momart Ltd</span> <span class="dm">— Standalone</span></span><br>
+    <span style="padding-left:20px;">├─ <span style="color:var(--vi);">PHFC</span> <span class="dm">— Holding</span></span><br>
+    <span style="padding-left:40px;">│  ├─ <span style="color:var(--vi);">Gosport Ferry</span> <span class="dm">— Revenue entity. Monopoly.</span></span><br>
+    <span style="padding-left:40px;">│  ├─ <span class="dm">PHC — Wharf. £75k intra-group.</span></span><br>
+    <span style="padding-left:40px;">│  └─ <span class="dm">CME — Maintenance. Zero ext rev FY23+.</span></span><br>
+    <span style="padding-left:20px;">└─ <span class="dm">HoldCo — Board, audit, AIM (~£400k)</span></span>
+  </div></div></div>
+</div>
+
+<!-- ═══════ RISKS ═══════ -->
+<div class="pn" id="risks">
+  <div class="hq">"None are deal-breakers.<br>All can be validated in early diligence."</div>
+  <div class="ha">Risk register & liability audit</div>
+  <div class="sc"><div class="sh"><span class="sn">01</span><span class="st2">Risk Register</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Risk</th><th>Sev.</th><th>Impact</th><th>Mitigant</th></tr></thead><tbody>
+    <tr><td>Zucker won't sell (28.7%)</td><td><span class="rb hi">HIGH</span></td><td>No deal at any price</td><td class="dm">Johnston channel. Testable.</td></tr>
+    <tr><td>FBS tail risk</td><td><span class="rb me">MED</span></td><td>£1–3m further loss</td><td class="dm">Diligence. Price into offer.</td></tr>
+    <tr><td>Momart decline</td><td><span class="rb me">MED</span></td><td>Art market contraction</td><td class="dm">Client refs. Personnel review.</td></tr>
+    <tr><td>PHFC regulatory</td><td><span class="rb lo">LOW</span></td><td>Fare constraints</td><td class="dm">Sold. Risk transferred.</td></tr>
+    <tr><td>Argentine holder</td><td><span class="rb lo">LOW</span></td><td>Geopolitical</td><td class="dm">Beneficial ownership inquiry.</td></tr>
+  </tbody></table></div></div></div>
+
+  <div class="sc"><div class="sh"><span class="sn">02</span><span class="st2">Liability Audit</span></div>
+  <div class="cd"><div class="tw"><table><thead><tr><th>Item</th><th>Cat.</th><th class="n">Base</th><th class="n">Stress</th><th class="n">Bear</th><th>Status</th></tr></thead><tbody>
+    <tr class="slbl"><td colspan="6">Confirmed</td></tr>
+    <tr><td class="in">Bank debt</td><td>Fin.</td><td class="n">1,400</td><td class="n">1,400</td><td class="n">1,400</td><td class="dm">Confirmed</td></tr>
+    <tr><td class="in">IFRS 16 Leyton</td><td><span class="rb fl">FLAG</span></td><td class="n">22,300</td><td class="n">22,300</td><td class="n">22,300</td><td class="dm">£22.3m on IFRS 16</td></tr>
+    <tr><td class="in">FBS provisions</td><td><span class="rb hi">HIGH</span></td><td class="n">800</td><td class="n">1,800</td><td class="n rd">3,000</td><td class="dm">Largest binary risk</td></tr>
+    <tr class="slbl"><td colspan="6">Lease</td></tr>
+    <tr><td class="in">FIC Stanley (Crown)</td><td><span class="rb hi">HIGH</span></td><td class="n">0</td><td class="n">750</td><td class="n rd">2,000</td><td class="dm">Subsidised; CoC risk</td></tr>
+    <tr><td class="in">Leyton SLB CoC</td><td><span class="rb me">MED</span></td><td class="n">750</td><td class="n">900</td><td class="n">1,200</td><td class="dm">Hines renegotiation</td></tr>
+    <tr class="slbl"><td colspan="6">Contingent</td></tr>
+    <tr><td class="in">TUPE</td><td><span class="rb me">MED</span></td><td class="n">450</td><td class="n">900</td><td class="n">1,500</td><td class="dm">35 staff</td></tr>
+    <tr><td class="in">Asbestos/env</td><td><span class="rb hi">HIGH</span></td><td class="n">0</td><td class="n">500</td><td class="n rd">2,000</td><td class="dm">Pre-1980 buildings</td></tr>
+    <tr><td class="in">Maritime</td><td><span class="rb lo">LOW</span></td><td class="n">0</td><td class="n">200</td><td class="n">500</td><td class="dm">P&I coverage</td></tr>
+    <tr><td class="in">Legal</td><td><span class="rb lo">LOW</span></td><td class="n">0</td><td class="n">300</td><td class="n">1,000</td><td class="dm">CCJ searches</td></tr>
+    <tr class="tot"><td>Total (excl. IFRS 16)</td><td></td><td class="n">1,550</td><td class="n">4,850</td><td class="n rd">10,500</td><td class="dm">Material vs £33.5m</td></tr>
+  </tbody></table></div></div>
+  <div class="co red"><strong>IFRS 16:</strong> Pre-IFRS 16 EV = £26.2m = 4.0×. On IFRS 16: EV = £48.5m = 7.3×. Correct treatment — must flag.</div></div>
+</div>
+
+<!-- ═══════ IC ACTION ═══════ -->
+<div class="pn" id="action">
+  <div class="hq">"Two gates. Minimal cost.<br>If both clear — we go."</div>
+  <div class="ha">Structured confidential pre-approach</div>
+  <div class="nr"><strong>Authorise two gating actions:</strong> (1) Confidential channel to Anita Zucker (28.7%). (2) FY2025 annual report. If both clear, return to IC for formal diligence authorisation. Cost to reach decision: effectively zero.</div>
+
+  <div class="tl" style="margin:44px 0;">
+    <div class="tli done"><div class="tll">Gate 1 · Wks 1–4 · Zero cost</div><div class="tlt">Zucker channel via Johnston</div><div class="tld">Stop/go. No deal if she won't sell.</div></div>
+    <div class="tli"><div class="tll">Gate 2 · Wks 1–2 · Public</div><div class="tlt">FY2025 annual report</div><div class="tld">FBS provisions, Momart trajectory, cash position.</div></div>
+    <div class="tli"><div class="tll">Step 3 · Wks 4–10 · £15–20k</div><div class="tlt">FIC RICS property appraisal</div><div class="tld">Independent Falklands property valuation.</div></div>
+    <div class="tli"><div class="tll">Step 4 · Wks 6–12 · Post-NDA</div><div class="tlt">Management access + sub-segment P&L</div><div class="tld">Validate rump. Key personnel.</div></div>
+    <div class="tli"><div class="tll">Step 5 · Wks 8–16</div><div class="tlt">Momart client refs + HR</div><div class="tld">10 institutions. Storage contracts. TUPE.</div></div>
+    <div class="tli"><div class="tll">Step 6 · Wks 16–24</div><div class="tlt">Formal offer + scheme</div><div class="tld">Target: 348p (30% premium).</div></div>
+  </div>
+
+  <div class="g3" style="margin-top:52px;">
+    <div class="sb gd" style="text-align:center;"><div class="sl">Sponsor Equity</div><div class="sv gd">£12.7m</div></div>
+    <div class="sb gn" style="text-align:center;"><div class="sl">Base MoIC / IRR</div><div class="sv gn">3.4× / 27.6%</div></div>
+    <div class="sb bl" style="text-align:center;"><div class="sl">PHFC Benchmark</div><div class="sv bl">12.6×</div><div class="ss">Rump at 4.7×. The gap is everything.</div></div>
+  </div>
+
+  <div class="ft">
+    Prepared by Joe Barry · March 2026 · All figures pre-IFRS 16 · Sources: FIH RNS filings, Company accounts<br>
+    <span style="color:var(--gold);margin-top:6px;display:inline-block;">◈ Strictly Confidential — Aurelius Group ◈</span>
+  </div>
+</div>
+
+</div><!-- mn -->
+</div><!-- APP -->
+
+<script>
+// ═══════ CANVAS BACKGROUND ═══════
+const cv=document.getElementById('bgCanvas'),cx=cv.getContext('2d');
+function resizeCanvas(){cv.width=window.innerWidth;cv.height=window.innerHeight;}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+
+const stars=[];
+for(let i=0;i<120;i++){stars.push({x:Math.random()*2000,y:Math.random()*1200,r:Math.random()*1.2+.3,a:Math.random()*.3+.05,s:Math.random()*.0008+.0002,d:Math.random()*Math.PI*2});}
+
+function drawBg(t){
+  cx.clearRect(0,0,cv.width,cv.height);
+  // Stars
+  stars.forEach(s=>{
+    s.d+=s.s;
+    const flicker=Math.sin(s.d)*0.3+0.7;
+    cx.beginPath();cx.arc(s.x*(cv.width/2000),s.y*(cv.height/1200),s.r,0,Math.PI*2);
+    cx.fillStyle=`rgba(201,162,74,${s.a*flicker})`;cx.fill();
+  });
+  // Subtle grid
+  cx.strokeStyle='rgba(201,162,74,0.015)';cx.lineWidth=.5;
+  for(let i=0;i<cv.width;i+=80){cx.beginPath();cx.moveTo(i,0);cx.lineTo(i,cv.height);cx.stroke();}
+  for(let i=0;i<cv.height;i+=80){cx.beginPath();cx.moveTo(0,i);cx.lineTo(cv.width,i);cx.stroke();}
+  // Compass
+  const cx2=cv.width/2,cy2=cv.height/2;
+  cx.save();cx.translate(cx2,cy2);cx.rotate(t*0.0002);
+  cx.strokeStyle='rgba(201,162,74,0.04)';cx.lineWidth=1;
+  cx.beginPath();cx.arc(0,0,100,0,Math.PI*2);cx.stroke();
+  cx.beginPath();cx.arc(0,0,130,0,Math.PI*2);cx.stroke();
+  cx.restore();
+  requestAnimationFrame(drawBg);
+}
+requestAnimationFrame(drawBg);
+
+// ═══════ PARTICLES ═══════
+const pc=document.getElementById('particles');
+for(let i=0;i<30;i++){
+  const p=document.createElement('div');p.className='particle';
+  p.style.left=Math.random()*100+'%';p.style.bottom=Math.random()*30-10+'%';
+  p.style.animationDelay=Math.random()*12+'s';p.style.animationDuration=(10+Math.random()*8)+'s';
+  p.style.width=p.style.height=(Math.random()*2+1)+'px';
+  pc.appendChild(p);
+}
+
+// ═══════ LOCK LOGIC ═══════
+// Password: 7.9 (the gap: 12.6 - 4.7)
+const VALID=['7.9','7.9x','7.9X'];
+let att=0;
+const errs=[
+  "Not quite. The answer isn't what they paid — it's what separates them.",
+  "Think gap, not multiple. 12.6 minus 4.7 equals… ?",
+  "You're thinking like a banker, not a detective. What's the distance?",
+  "A penguin could calculate this faster. Subtract the small from the big.",
+  "The thesis lives in the space between two numbers. Find it.",
+  "Closer. The ferry was 12.6×. The rump is 4.7×. The void between them is…",
+  "Even the squid in the Falklands know this one. 12.6 − 4.7.",
+];
+
+function tryUnlock(){
+  const v=document.getElementById('passIn').value.trim();
+  if(VALID.includes(v)){
+    document.getElementById('LS').classList.add('bye');
+    setTimeout(()=>{document.getElementById('LS').style.display='none';document.getElementById('APP').classList.add('on');},900);
+  }else{
+    document.getElementById('lsErr').textContent=errs[att%errs.length];att++;
+    document.getElementById('passIn').value='';document.getElementById('passIn').focus();
+  }
+}
+document.getElementById('passIn').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+
+function showHint(){document.getElementById('hintModal').classList.add('show');}
+function hideHint(){document.getElementById('hintModal').classList.remove('show');}
+document.getElementById('hintModal').addEventListener('click',e=>{if(e.target===document.getElementById('hintModal'))hideHint();});
+
+// ═══════ TABS ═══════
+document.querySelectorAll('.tb').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.pn').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');document.getElementById(t.dataset.p).classList.add('on');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
